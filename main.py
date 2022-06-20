@@ -57,7 +57,7 @@ if __name__ == '__main__':
     if opt.use_n == 0:
         from multicalib_Nmodel import MultiCalibModel
         model = MultiCalibModel(opt, x_train, y_train, lab_train, x_val, y_val, lab_val, x_test, y_test, lab_test, use_n=True)
-    if opt.use_n == 1:
+    elif opt.use_n == 1:
         from multicalib_Nmodel import MultiCalibModel
         model = MultiCalibModel(opt, x_train, y_train, lab_train, x_val, y_val, lab_val, x_test, y_test, lab_test, use_n=False)
     else:
