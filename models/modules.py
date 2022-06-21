@@ -416,6 +416,35 @@ class IdentityAwaredCalibModule_v3(nn.Module):
         x = x.permute(1, 0, 2).contiguous()
         return x
 
+class Discriminator(nn.Module):
+    def __init__(self, device, input_dim=128, hidden_dim=128, ouput_dim=8) -> None:
+        super().__init__()
+        
+        self.device = device
+        self.input_to_latent = nn.LSTM(input_size=input_dim,
+                                       hidden_size=hidden_dim,
+                                       bidirectional=True,
+                                       batch_first=True,
+                                       num_layers=1
+                                       )
+        self.model = nn.Sequential(
+            nn.LeakyReLU(),
+            nn.Linear(in_features=hidden_dim * 2, out_features=hidden_dim),
+            nn.LeakyReLU(),
+            nn.Linear(in_features=hidden_dim, out_features=1),
+            nn.Sigmoid()
+        )
+
+    def forward(self, inp, pred):
+        d_input = torch.cat((inp, pred), dim=1)
+        h_input, _ = self.input_to_latent(d_input)
+
+        input_latent = h_input[:, -1, :]
+        output = self.model(input_latent)
+
+        return output
+
+
 if __name__ == '__main__':
     # module = IdentityAwaredCalibModule_v2(torch.device('cuda'),input_dim=128, ouput_dim=5)
     x = torch.randn(128, 5, 7, 64)

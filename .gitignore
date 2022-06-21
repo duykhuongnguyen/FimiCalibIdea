@@ -3,3 +3,4 @@ wandb/
 logs/
 */__pycache__/*
 *.swp
+__pycache__/
