@@ -10,6 +10,11 @@ import config as CFG
 import matplotlib.pyplot as plt
 
 
+# Fixing random seeds           
+torch.manual_seed(1368)         
+rs = np.random.RandomState(1368)
+
+
 class MultiCalibModel:
     def __init__(self, args, x_train, y_train, lab_train, x_val, y_val, lab_val, x_test, y_test, lab_test, devices=CFG.devices, use_n=False, gan_loss=False):
         self.args = args
@@ -124,8 +129,8 @@ class MultiCalibModel:
     def train_gan(self):
         best_mse = np.inf
 
-        optimizer_g = torch.optim.RMSprop(self.model.parameters(), lr=self.opt.lr)
-        optimizer_d = torch.optim.RMSprop(self.discriminator.parameters(), lr=self.opt.lr)
+        optimizer_g = torch.optim.RMSprop(self.model.parameters(), lr=CFG.lr)
+        optimizer_d = torch.optim.RMSprop(self.discriminator.parameters(), lr=CFG.lr)
         adversarial_loss = nn.BCELoss()
         generator_loss = nn.MSELoss()
 
@@ -136,9 +141,9 @@ class MultiCalibModel:
         logger = MetricLogger(self.args, tags=['train', 'val'])
         
         for epoch in range(CFG.epochs):
-            # self.model.train()
+            self.model.train()
             d_loss = 0
-            for _ in range(self.args.d_iter):
+            for _ in range(CFG.d_iter):
                 # train discriminator on real data
                 for x, y, lab in self.train_loader:
                     condition = x.to(self.device)
@@ -154,9 +159,10 @@ class MultiCalibModel:
 
                     d_loss += d_real_loss.detach().cpu().numpy()
                     # train discriminator on fake data
-                    noise_batch = torch.tensor(rs.normal(0, 1, (condition.size(0), CFG.noise_dim)),
+                    noise_batch = torch.tensor(rs.normal(0, 1, (condition.size(0), condition.size(2), CFG.noise_dim)),
                                             device=self.device, dtype=torch.float32)
-                    x_fake = self.generator(noise_batch, condition).detach()
+                    x_fake, _ = self.model(condition, lab, noise_batch)
+                    x_fake = x_fake.detach()
                     d_fake_decision = self.discriminator(x_fake, condition)
                     d_fake_loss = 1/2 * adversarial_loss(d_fake_decision,
                                                 torch.full_like(d_fake_decision, 0, device=self.device))
@@ -165,77 +171,74 @@ class MultiCalibModel:
                     
                     d_loss += d_fake_loss.detach().cpu().numpy()
 
-            d_loss = d_loss / (2 * self.opt.d_iter)
+            d_loss = d_loss / (2 * CFG.d_iter)
 
-            self.generator.zero_grad()
-            noise_batch = torch.tensor(rs.normal(0, 1, (self.opt.batch_size, CFG.noise_dim)), device=self.device,
-                                       dtype=torch.float32)
+            g_loss_sum = 0
+            for x, y, lab in self.train_loader:
+                condition = x.to(self.device)
+                real_data = y.to(self.device)
+                lab = lab.to(self.device)
 
-            x_fake = self.generator(noise_batch, condition)
-            # print(x_fake)
-            d_g_decision = self.discriminator(x_fake, condition)
+                self.model.zero_grad()
+                noise_batch = torch.tensor(rs.normal(0, 1, (condition.size(0), condition.size(2), CFG.noise_dim)), device=self.device,
+                                            dtype=torch.float32)
+
+                x_fake, _ = self.model(condition, lab, noise_batch)
+                # print(x_fake)
+                # d_g_decision = self.discriminator(x_fake, condition)
             
-            # Mackey-Glass works best with Minmax loss in our expriements while other dataset
-            # produce their best result with non-saturated loss
-            # if opt.dataset == "mg" or opt.dataset == 'aqm':
-            g_loss = 1/2 * adversarial_loss(d_g_decision, torch.full_like(d_g_decision, 1, device=self.device))
-            # else:
-            #     g_loss = -1 * adversarial_loss(d_g_decision, torch.full_like(d_g_decision, 0, device=self.device))
-            g_loss.backward()
-            optimizer_g.step()
+                # Mackey-Glass works best with Minmax loss in our expriements while other dataset
+                # produce their best result with non-saturated loss
+                # if opt.dataset == "mg" or opt.dataset == 'aqm':
+                # g_loss = 1/2 * adversarial_loss(d_g_decision, torch.full_like(d_g_decision, 1, device=self.device))
+                g_loss = generator_loss(x_fake, real_data)
+                # else:
+                #     g_loss = -1 * adversarial_loss(d_g_decision, torch.full_like(d_g_decision, 0, device=self.device))
+                g_loss.backward()
+                optimizer_g.step()
 
-            g_loss = g_loss.detach().cpu().numpy()
-
+                g_loss_sum += g_loss.detach().cpu().numpy()
+            print(f"Epoch: {epoch+1:3d}/{CFG.epochs:3d}, g_loss: {g_loss_sum:.4f}, d_loss: {d_loss:.4f}")
             # Validation
-            noise_batch = torch.tensor(rs.normal(0, 1, (x_val.size(0), CFG.noise_dim)), device=self.device,
-                                       dtype=torch.float32)
-            preds = self.generator(noise_batch, x_val).detach().cpu().numpy()
+            self.model.eval()
+            mse, mae, mape = 0, 0, 0
+            cnt = 0
+            for x, y, lab in self.val_loader:
+                cnt += 1
+                x_val = x.to(self.device)
+                y_val = y.to(self.device)
+                lab = lab.to(self.device)
 
-            kld = utils.calc_kld(preds, y_val, self.opt.hist_bins, self.opt.hist_min, self.opt.hist_max)
-            rmse =  np.sqrt(np.square(preds - y_val).mean())
-            mae = np.abs(preds - y_val).mean()
+                noise_batch = torch.tensor(rs.normal(0, 1, (x_val.size(0), CFG.input_timestep, CFG.noise_dim)), device=self.device,
+                                                   dtype=torch.float32)
+                pred, _ = self.model(x_val, lab, noise_batch)
+                pred = pred.detach()
 
-            if self.opt.metric == 'kld': 
-                self.es(kld)
-                if self.es.early_stop:
-                    break
-                if kld <= best_kld and kld != np.inf:
-                    best_kld = kld
-                    print("step : {} , KLD : {}, RMSE : {}, MAE: {}".format(step, best_kld,
-                                                                rmse, mae))
-                    torch.save({
-                        'g_state_dict': self.generator.state_dict()
-                    }, "./{}/{}_best.torch".format(self.opt.dataset, self.opt.name))
-            elif self.opt.metric == 'rmse':
-                self.es(rmse)
-                if self.es.early_stop:
-                    break
-                if rmse <= best_rmse and rmse != np.inf:
-                    best_rmse = rmse
-                    print("step : {} , KLD : {}, RMSE : {}, MAE: {}".format(step, kld,
-                                                                rmse, mae))
-                    torch.save({
-                        'g_state_dict': self.generator.state_dict()
-                    }, "./{}/{}_best.torch".format(self.opt.dataset, self.opt.name))
+                mse += np.square(pred - y_val).mean()
+                mae += torch.abs(pred - y_val).mean()
+                # mape += torch.mean(torch.abs((pred - y) / y)) * 100
+            mse /= cnt
+            mae /= cnt
+            # mape /= cnt
+
+            log_dict['val/mse'] = mse
+            log_dict['val/mae'] = mae
+            # log_dict['val/mape'] = mape
+            logger.log_metrics(epoch, log_dict)
+            # print(log_dict)
+            print(f"Epoch: {epoch+1:3d}/{CFG.epochs:3d}, MSE_val: {mse:.4f}, MAE_val: {mae:.4f}")
+            self.es(mse)
+
+            if mse < best_mse:
+                best_mse = mse
+                torch.save(self.model.state_dict(), f"./logs/checkpoints/{self.args.name}_best.pt")
             else:
-                self.es(mae)
-                if self.es.early_stop:
+                torch.save(self.model.state_dict(), f"./logs/checkpoints/{self.args.name}_last.pt")
+                # self.model.load_state_dict(torch.load(f"./logs/checkpoints/{self.args.name}_best.pt"))
+                if (self.es.early_stop):
+                    print("Early stopping")
                     break
-                if mae <= best_mae and mae != np.inf:
-                    best_mae = mae
-                    print("step : {} , KLD : {}, RMSE : {}, MAE: {}".format(step, kld,
-                                                                rmse, mae))
-                    torch.save({
-                        'g_state_dict': self.generator.state_dict()
-                    }, "./{}/{}_best.torch".format(self.opt.dataset, self.opt.name))
-
-            if step % 100 == 0:
-                print(YELLOW_TEXT + BOLD + "step : {} , d_loss : {} , g_loss : {}".format(step, d_loss, g_loss) + ENDC)
-                torch.save({
-                    'g_state_dict': self.generator.state_dict(), 
-                    'd_state_dict': self.discriminator.state_dict(), 
-                }, "./{}/{}_checkpoint.torch".format(self.opt.dataset, self.opt.name))
-    
+   
     def test(self):
         self.model.load_state_dict(torch.load(f"./logs/checkpoints/{self.args.name}_best.pt"))
         
@@ -249,7 +252,10 @@ class MultiCalibModel:
             x = x.to(self.device)
             y = y.to(self.device)
             lab = lab.to(self.device)
-            pred, _ = self.model(x, lab)
+
+            noise_batch = torch.tensor(rs.normal(0, 1, (x.size(0), CFG.input_timestep, CFG.noise_dim)), device=self.device,
+                                                                       dtype=torch.float32)
+            pred, _ = self.model(x, lab, noise_batch)
 
             preds.append(pred.cpu().detach().numpy())
             gtruths.append(y.cpu().detach().numpy())

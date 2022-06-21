@@ -436,13 +436,21 @@ class Discriminator(nn.Module):
         )
 
     def forward(self, inp, pred):
-        d_input = torch.cat((inp, pred), dim=1)
-        h_input, _ = self.input_to_latent(d_input)
+        _, M, _, _ = inp.shape
 
-        input_latent = h_input[:, -1, :]
-        output = self.model(input_latent)
+        outputs = []
+        for i in range(M):
+            inp_i = inp[:, i, :, :]
+            pred_i = pred[:, i, :, :]
+            d_input = torch.cat((inp_i, pred_i), dim=1)
+            h_input, _ = self.input_to_latent(d_input)
 
-        return output
+            input_latent = h_input[:, -1, :]
+            output_i = self.model(input_latent)
+            outputs.append(output_i)
+        outputs = torch.stack(outputs, dim=1)
+
+        return outputs
 
 
 if __name__ == '__main__':
