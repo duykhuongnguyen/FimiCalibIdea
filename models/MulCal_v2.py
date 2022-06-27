@@ -58,7 +58,7 @@ ition.size(0), CFG.noise_dim)),
                 if self.new_gen:
                     lc_input = torch.cat((hl.squeeze(0), noise), dim=1)
                     condition_tilde = []                                                       
-                    for _ in range(self.output_timestep):
+                    for _ in range(self.hidden_dim):
                         hl_tilde, _ = self.latent_to_cal(lc_input)          
                         lc_input = torch.cat((hl_tilde, noise), dim=1)
                         hl_coeff = torch.bmm(condition_latent, hl_tilde.unsqueeze(2)).squeeze(2)                                
