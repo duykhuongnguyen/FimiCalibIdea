@@ -69,9 +69,9 @@ if __name__ == '__main__':
  lab_val, x_test, y_test, lab_test, gan_loss=True)
         model.test()
     
-    # if opt.train_type == 'train':
-    #     model.train()
-    #     model.test()
-    # else:
-    #     model.test()
+    if opt.train_type == 'train':
+        model.train()
+        model.test()
+    else:
+        model.test()
 
