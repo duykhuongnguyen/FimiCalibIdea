@@ -67,7 +67,7 @@ if __name__ == '__main__':
         from multicalib import MultiCalibModel
         model = MultiCalibModel(opt, x_train, y_train, lab_train, x_val, y_val,
  lab_val, x_test, y_test, lab_test, gan_loss=True)
-        model.train_gan()
+        model.test()
     
     # if opt.train_type == 'train':
     #     model.train()

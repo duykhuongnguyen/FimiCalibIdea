@@ -3,7 +3,7 @@ import torch.nn as nn
 from models.modules import *
 
 class MulCal(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, n_class, device, mean, std, noise=False):
+    def __init__(self, input_dim, hidden_dim, output_dim, n_class, device, mean, std, noise=False, new_gen=False):
         super(MulCal, self).__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
@@ -14,12 +14,23 @@ class MulCal(nn.Module):
         print(self.data_mean)
         self.n_class = n_class
         self.noise = noise
+        self.new_gen = new_gen
 
         self.extractor = SeriesEncoder(input_dim, hidden_dim - 2) if noise else SeriesEncoder(input_dim, hidden_dim)
         self.identity = IdentityLayer_v2(hidden_dim * 2, hidden_dim, n_class)
         self.seperate_module = IdentityMergingModule(self.n_class, self.hidden_dim, self.hidden_dim * 2, 3)
         self.calib = IdentityAwaredCalibModule_v2(device, hidden_dim * 2, output_dim)
         self.discriminator = Discriminator(device, input_dim, hidden_dim, output_dim)
+        self.cond_to_latent = nn.LSTM(input_size=input_dim,
+                                      hidden_size=hidden_dim,
+                                      bidirectional=False,
+                                      batch_first=True)
+        self.latent_to_cal = nn.LSTMCell(input_size=hidden_dim + 4,
+                                         hidden_size=hidden_dim)
+        self.ctx_2_cal = nn.Sequential(
+            nn.LeakyReLU(),
+            nn.Linear(in_features=hidden_dim * 2, out_features=output_dim)
+        )
 
     def forward(self, input, label, noise=None):
         '''
@@ -39,9 +50,25 @@ ition.size(0), CFG.noise_dim)),
             input_i = input[:, i, :, :]
             label_i = label[:, i, :]
             input_i = (input_i - self.data_mean[i]) / self.data_std[i]
-            latent_input_i = self.extractor(input_i).transpose(0, 1).contiguous()
+            if self.new_gen:
+                condition_latent, (hl, _) = self.cond_to_latent(input_i)
+            else:
+                latent_input_i = self.extractor(input_i).transpose(0, 1).contiguous()
             if self.noise:
-                latent_input_i = torch.cat((latent_input_i, noise), dim=2)
+                if self.new_gen:
+                    lc_input = torch.cat((hl.squeeze(0), noise), dim=1)
+                    condition_tilde = []                                                       
+                    for _ in range(self.output_timestep):
+                        hl_tilde, _ = self.latent_to_cal(lc_input)          
+                        lc_input = torch.cat((hl_tilde, noise), dim=1)
+                        hl_coeff = torch.bmm(condition_latent, hl_tilde.unsqueeze(2)).squeeze(2)                                
+                        hl_coeff = torch.softmax(hl_coeff, dim=1)       
+                        hl_context = torch.bmm(hl_coeff.unsqueeze(1), condition_latent).squeeze(1)
+                        hl_fin = torch.cat((hl_tilde, hl_context), dim=1)
+                        condition_tilde.append(hl_fin)
+                    latent_input_i = torch.stack(condition_tilde, dim=1)
+                else:
+                    latent_input_i = torch.cat((latent_input_i, noise), dim=2)
             identity_latent_input_i = self.identity(label_i)
             latent_inputs.append(latent_input_i)
             identity_latents.append(identity_latent_input_i)

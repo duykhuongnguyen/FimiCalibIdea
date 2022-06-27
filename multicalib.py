@@ -5,6 +5,7 @@ from utils import EarlyStopping, MetricLogger
 from util.losses import ConstrastiveLoss
 from models.MulCal_v2 import MulCal
 from models.modules import *
+from components import CCGGenerator
 from Data.calib_loader import CalibDataset
 import config as CFG
 import matplotlib.pyplot as plt
@@ -42,6 +43,7 @@ class MultiCalibModel:
         print("\n************************\n")
 
         if self.gan_loss:
+            self.generator = CCGGenerator(CFG.noise_dim, CFG.input_dim, CFG.hidden_dim, CFG.output_dim, self.args.data_mean, self.args.data_std)
             self.discriminator = Discriminator(self.device, CFG.input_dim, CFG.hidden_dim, CFG.output_dim)
     
     def train(self):

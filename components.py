@@ -95,6 +95,8 @@ class CCGGenerator(nn.Module):
         condition_latent, (hl, _) = self.cond_to_latent(condition)
     
         lc_input = torch.cat((hl.squeeze(0), noise), dim=1)
+        print(lc_input.shape)
+        exit()
         condition_tilde = []
         for _ in range(self.output_timestep):
             hl_tilde, _ = self.latent_to_cal(lc_input)

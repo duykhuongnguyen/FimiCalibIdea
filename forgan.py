@@ -38,7 +38,7 @@ class CalCGAN:
 
         # Defining GAN components
         self.generator = CCGGenerator(mean=opt.data_mean, std=opt.data_std)
-        self.generator.get_warm_start()
+        # self.generator.get_warm_start()
 
         self.discriminator = CCGDiscriminator(mean=opt.data_mean, std=opt.data_std)
 
@@ -77,13 +77,12 @@ class CalCGAN:
                 condition = x_train[idx]
                 real_data = y_train[idx]
                 self.discriminator.zero_grad()
-                d_real_decision = self.discriminator(real_data, condition)
-                d_real_loss = 1/ 2 * adversarial_loss(d_real_decision,
-                                               torch.full_like(d_real_decision, 1, device=self.device))
-                d_real_loss.backward()
-                optimizer_d.step()
+                # d_real_decision = self.discriminator(real_data, condition)
+                # d_real_loss = 1/ 2 * adversarial_loss(d_real_decision, torch.full_like(d_real_decision, 1, device=self.device))
+                # d_real_loss.backward()
+                # optimizer_d.step()
 
-                d_loss += d_real_loss.detach().cpu().numpy()
+                # d_loss += d_real_loss.detach().cpu().numpy()
                 # train discriminator on fake data
                 noise_batch = torch.tensor(rs.normal(0, 1, (condition.size(0), CFG.noise_dim)),
                                            device=self.device, dtype=torch.float32)
