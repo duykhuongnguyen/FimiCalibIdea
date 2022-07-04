@@ -21,7 +21,7 @@ class MSJF(nn.Module):
         for i in range(n_class):
             self.dec.add_module(f"DEC {i}", nn.Linear(hidden_dim * 4, output_dim))
 
-    def forward(self, input, lab=None):
+    def forward(self, input, lab=None, noise=None):
         # shape of images: (batch, channel, height, width)
         _, M, _, _ = input.shape
 
@@ -30,17 +30,17 @@ class MSJF(nn.Module):
             input_i = input[:, i, :, :]
             # input_i = (input_i - self.data_mean[i]) / self.data_std[i]
             input_cat.append(input_i)
-            latent_i = self.pri_enc[i](input_i)
+            latent_i = self.pri_enc[i](input_i).transpose(0, 1).contiguous()
             latent.append(latent_i)
         latent = torch.stack(latent, dim=1)
         input_cat = torch.cat(input_cat, dim=2)
 
-        latent_sha = self.sha_enc(input_cat)
+        latent_sha = self.sha_enc(input_cat).transpose(0, 1).contiguous()
         
         output = []
         for i in range(M):
             latent_i = latent[:, i, :, :]
-            latent_i = torch.cat([latent_i, latent_sha], dim=2).permute(1, 0, 2)
+            latent_i = torch.cat([latent_i, latent_sha], dim=2)
             calib_output_i = self.dec[i](latent_i)
             calib_output_i = calib_output_i * self.data_std[i] + self.data_mean[i]
             output.append(calib_output_i)
