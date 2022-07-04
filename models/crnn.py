@@ -71,7 +71,7 @@ class CRNN(nn.Module):
         
         return cnn
 
-    def forward(self, input):
+    def forward(self, input, lab=None):
         # shape of images: (batch, channel, height, width)
         _, M, _, _ = input.shape
 
@@ -106,7 +106,7 @@ class CRNN(nn.Module):
         # recurrent, _ = self.rnn2(recurrent)
 
         # output = self.dense(recurrent)
-        return output  # shape: (seq_len, batch, num_class)
+        return output, None  # shape: (seq_len, batch, num_class)
 
 
 if __name__ == '__main__':
