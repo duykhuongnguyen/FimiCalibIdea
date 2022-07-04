@@ -57,7 +57,8 @@ class MultiCalibModel:
         optimizer = torch.optim.AdamW(self.model.parameters(), lr=CFG.lr)
         criteria = nn.MSELoss()
         criteria = criteria.to(self.device)
-        criteria_cons = ConstrastiveLoss()  
+        # criteria_cons = ConstrastiveLoss()  
+        criteria_cons = nn.MSELoss()
 
         log_dict = {}
         logger = MetricLogger(self.args, tags=['train', 'val'])
@@ -78,8 +79,8 @@ class MultiCalibModel:
                 # print(pred.shape)
                 # print(y.shape)
                 loss = criteria(pred, y)
-                # loss_cons = criteria_cons(sep_indicator)
-                # loss_cons.backward(retain_graph=True)
+                loss_cons = criteria_cons(sep_indicator, x)
+                loss_cons.backward(retain_graph=True)
 
                 mae = torch.mean(torch.abs(pred - y))
                 # mape = torch.mean(torch.abs((pred - y) / y)) * 100
