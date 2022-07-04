@@ -5,6 +5,7 @@ from utils import EarlyStopping, MetricLogger
 from util.losses import ConstrastiveLoss
 from models.MulCal_v2 import MulCal
 from models.crnn import CRNN
+from models.msjf import MSJF
 from models.modules import *
 from components import CCGGenerator
 from Data.calib_loader import CalibDataset
@@ -54,6 +55,12 @@ class MultiCalibModel:
             print("\nNetwork Architecture\n")
             print(self.model)
             print("\n************************\n")
+        elif baseline == 2:
+            self.model = MSJF(CFG.input_dim, CFG.hidden_dim, CFG.output_dim, CFG.n_class, self.device, self.args.data_mean, self.args.data_std)
+            self.model.to(self.device)
+            print("\nNetwork Architecture\n")
+            print(self.model)
+            print("\n************************\n")
     
     def train(self):
         best_mse = np.inf
@@ -62,7 +69,7 @@ class MultiCalibModel:
         criteria = nn.MSELoss()
         criteria = criteria.to(self.device)
         # criteria_cons = ConstrastiveLoss()  
-        criteria_cons = nn.MSELoss()
+        # criteria_cons = nn.MSELoss()
 
         log_dict = {}
         logger = MetricLogger(self.args, tags=['train', 'val'])
@@ -83,8 +90,8 @@ class MultiCalibModel:
                 # print(pred.shape)
                 # print(y.shape)
                 loss = criteria(pred, y)
-                loss_cons = criteria_cons(sep_indicator, x)
-                loss_cons.backward(retain_graph=True)
+                # loss_cons = criteria_cons(sep_indicator, x)
+                # loss_cons.backward(retain_graph=True)
 
                 mae = torch.mean(torch.abs(pred - y))
                 # mape = torch.mean(torch.abs((pred - y) / y)) * 100
