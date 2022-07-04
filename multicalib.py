@@ -4,6 +4,7 @@ import torch.nn as nn
 from utils import EarlyStopping, MetricLogger
 from util.losses import ConstrastiveLoss
 from models.MulCal_v2 import MulCal
+from models.crnn import CRNN
 from models.modules import *
 from components import CCGGenerator
 from Data.calib_loader import CalibDataset
@@ -17,7 +18,7 @@ rs = np.random.RandomState(1368)
 
 
 class MultiCalibModel:
-    def __init__(self, args, x_train, y_train, lab_train, x_val, y_val, lab_val, x_test, y_test, lab_test, devices=CFG.devices, use_n=False, gan_loss=False, new_gen=False):
+    def __init__(self, args, x_train, y_train, lab_train, x_val, y_val, lab_val, x_test, y_test, lab_test, devices=CFG.devices, use_n=False, gan_loss=False, new_gen=False, baseline=0):
         self.args = args
         self.train_loader = torch.utils.data.DataLoader(CalibDataset(x_train, y_train, lab_train), batch_size=CFG.batch_size, shuffle=True)
         self.val_loader = torch.utils.data.DataLoader(CalibDataset(x_val, y_val, lab_val), batch_size=CFG.batch_size, shuffle=True)
@@ -46,6 +47,9 @@ class MultiCalibModel:
 
         if self.gan_loss:
             self.discriminator = Discriminator(self.device, CFG.input_dim, CFG.hidden_dim, CFG.output_dim)
+
+        if baseline == 1:
+            self.model = CRNN(CFG.input_dim, CFG.output_dim, CFG.n_class, self.device, self.args.data_mean, self.args.data_std)
     
     def train(self):
         best_mse = np.inf
@@ -74,8 +78,8 @@ class MultiCalibModel:
                 # print(pred.shape)
                 # print(y.shape)
                 loss = criteria(pred, y)
-                loss_cons = criteria_cons(sep_indicator)
-                loss_cons.backward(retain_graph=True)
+                # loss_cons = criteria_cons(sep_indicator)
+                # loss_cons.backward(retain_graph=True)
 
                 mae = torch.mean(torch.abs(pred - y))
                 # mape = torch.mean(torch.abs((pred - y) / y)) * 100
