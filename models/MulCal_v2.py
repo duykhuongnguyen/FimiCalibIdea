@@ -79,7 +79,7 @@ ition.size(0), CFG.noise_dim)),
         # print(identity_latent.shape)
 
         merged_inputs, sep_indicator = self.seperate_module(latent_input, identity_latent)
-        # print(merged_inputs.shape)
+        print(merged_inputs.shape)
 
         calib_outs = []
         for i in range(M):

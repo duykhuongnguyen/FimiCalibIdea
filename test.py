@@ -18,4 +18,4 @@ label = torch.randn(2, 5, 5)
 noise_batch = torch.tensor(rs.normal(0, 1, (2, 7, 4)), dtype=torch.float32)
 
 calib_outs = model(input, label, noise_batch)           
-# print(calib_outs)
+print(calib_outs[0].shape)

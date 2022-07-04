@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 from utils import EarlyStopping, MetricLogger
 from models.MulCal_Nmodel import SingleCal
+from models.crnn import CRNN
 from Data.calib_loader import CalibDataset
 import config as CFG
 import matplotlib.pyplot as plt
@@ -36,6 +37,12 @@ class MultiCalibModel:
             self.models = [SingleCal(CFG.input_dim, CFG.hidden_dim, CFG.output_dim, self.device, self.args.data_mean[i, :], self.args.data_std[i,:]).to(self.device) for i in range(self.n_devices)]
             print("\nNetwork Architecture\n")
             print(self.models[0])
+            print("\n************************\n")
+        elif use_n == "10":
+            self.model = CRNN(CFG.input_dim, CFG.output_dim, CFG.n_class, self.device, self.args.data_mean.mean(axis=0), self.args.data_std.mean(axis=0))
+            self.model.to(self.device)
+            print("\nNetwork Architecture\n")
+            print(self.model)
             print("\n************************\n")
         else:
             self.model = SingleCal(CFG.input_dim, CFG.hidden_dim, CFG.output_dim, self.device, self.args.data_mean.mean(axis=0), self.args.data_std.mean(axis=0))
