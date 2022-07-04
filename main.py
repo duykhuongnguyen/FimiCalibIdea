@@ -65,7 +65,7 @@ if __name__ == '__main__':
         model = MultiCalibModel(opt, x_train, y_train, lab_train, x_val, y_val, lab_val, x_test, y_test, lab_test, baseline=1)
     elif opt.use_n == 11:
         from multicalib import MultiCalibModel
-        model = MultiCalibModel(opt, x_train, y_train, lab_train, x_val, y_val, lab_val, x_test, y_test, lab_test, baseline=1)
+        model = MultiCalibModel(opt, x_train, y_train, lab_train, x_val, y_val, lab_val, x_test, y_test, lab_test, baseline=2)
     elif opt.use_n == 2:
         from multicalib import MultiCalibModel
         model = MultiCalibModel(opt, x_train, y_train, lab_train, x_val, y_val, lab_val, x_test, y_test, lab_test)
