@@ -8,7 +8,7 @@ import torch.nn as nn
 class CRNN(nn.Module):
 
     def __init__(self, input_dim, output_dim, n_class, device=None, mean=None, std=None,
-                 map_to_seq_hidden=64, rnn_hidden=256, leaky_relu=False):
+                 map_to_seq_hidden=64, rnn_hidden=64, leaky_relu=False):
         super(CRNN, self).__init__()
 
         self.data_mean = torch.tensor(mean, dtype=torch.float32, device=device)
@@ -62,9 +62,9 @@ class CRNN(nn.Module):
         # (128, img_height // 4, img_width // 4)
 
         conv_relu(2)
-        cnn.add_module(f'pooling2_{dev}', nn.MaxPool2d(kernel_size=2, stride=1, padding=1, dilation=2))  # (256, img_height // 8, img_width // 4)
+        # cnn.add_module(f'pooling2_{dev}', nn.MaxPool2d(kernel_size=2, stride=1, padding=1, dilation=2))  # (256, img_height // 8, img_width // 4)
 
-        conv_relu(3)
+        # conv_relu(3)
         # conv_relu(4, batch_norm=True)
         # conv_relu(5, batch_norm=True)
         # cnn.add_module('pooling3', nn.MaxPool2d(kernel_size=2, stride=1, padding=1, dilation=2))  # (512, img_height // 16, img_width // 4)
@@ -77,7 +77,7 @@ class CRNN(nn.Module):
         return cnn
 
     def _decnn_backbone(self, img_channel, img_height, img_width, leaky_relu, dev):                                                              
-        channels = [128, 128, 128, 64, 1] # [1, 64, 128, 128, 128]                                                                          
+        channels = [128, 128, 64, 1] # [1, 64, 128, 128, 128]                                                                          
         kernel_sizes = [3, 3, 3, 3]                                                                                                       
         strides = [1, 1, 1, 1]                                                                                                            
         paddings = [1, 1, 1, 1]                                                                                                           
@@ -110,9 +110,9 @@ class CRNN(nn.Module):
         # (128, img_height // 4, img_width // 4)                                                                                          
                                                                                                                                       
         conv_relu(2)                                                                                                                      
-        cnn.add_module(f'depooling2_{dev}', nn.MaxPool2d(kernel_size=2, stride=1, padding=1, dilation=2))  # (256, img_height // 8, img_width // 4)
+        # cnn.add_module(f'depooling2_{dev}', nn.MaxPool2d(kernel_size=2, stride=1, padding=1, dilation=2))  # (256, img_height // 8, img_width // 4)
                                                                                                                                       
-        conv_relu(3)        
+        # conv_relu(3)        
 
         return cnn
 

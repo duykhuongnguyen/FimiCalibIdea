@@ -50,6 +50,9 @@ class MultiCalibModel:
 
         if baseline == 1:
             self.model = CRNN(CFG.input_dim, CFG.output_dim, CFG.n_class, self.device, self.args.data_mean, self.args.data_std)
+            print("\nNetwork Architecture\n")
+            print(self.model)
+            print("\n************************\n")
     
     def train(self):
         best_mse = np.inf
@@ -283,8 +286,8 @@ class MultiCalibModel:
                                                                        dtype=torch.float32)
             else:
                 noise_batch = None
-            pred, _ = self.model(x, lab, noise_batch)
-
+            # pred, _ = self.model(x, lab, noise_batch)
+            pred, _ = self.model(x, lab)
             preds.append(pred.cpu().detach().numpy())
             gtruths.append(y.cpu().detach().numpy())
             # mse += torch.mean((pred - y) ** 2)
