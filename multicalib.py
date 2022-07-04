@@ -50,6 +50,7 @@ class MultiCalibModel:
 
         if baseline == 1:
             self.model = CRNN(CFG.input_dim, CFG.output_dim, CFG.n_class, self.device, self.args.data_mean, self.args.data_std)
+            self.model.to(self.device)
             print("\nNetwork Architecture\n")
             print(self.model)
             print("\n************************\n")
