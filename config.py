@@ -11,5 +11,5 @@ lr=1e-4
 d_iter=5
 epochs=500
 devices=['e', '1', '14', '20', '27', '30']
-attributes=['PM2_5', 'PM10', 'temp', 'humidity']
+attributes=['PM2_5', 'PM10', 'humidity', 'temp']
 warm_start_path = 'fimi/best_gen.torch'
