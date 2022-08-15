@@ -11,7 +11,6 @@ class MulCal(nn.Module):
         self.device = device
         self.data_mean = torch.tensor(mean, dtype=torch.float32, device=device)
         self.data_std = torch.tensor(std, dtype=torch.float32, device=device)
-        print(self.data_mean)
         self.n_class = n_class
         self.noise = noise
         self.new_gen = new_gen
@@ -79,7 +78,6 @@ ition.size(0), CFG.noise_dim)),
         # print(identity_latent.shape)
 
         merged_inputs, sep_indicator = self.seperate_module(latent_input, identity_latent)
-        print(merged_inputs.shape)
 
         calib_outs = []
         for i in range(M):

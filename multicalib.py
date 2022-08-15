@@ -47,7 +47,7 @@ class MultiCalibModel:
         print("\n************************\n")
 
         if self.gan_loss:
-            self.discriminator = Discriminator(self.device, CFG.input_dim, CFG.hidden_dim, CFG.output_dim)
+            self.discriminator = Discriminator(self.device, CFG.input_dim, CFG.hidden_dim, CFG.output_dim).to(self.device)
 
         if baseline == 1:
             self.model = CRNN(CFG.input_dim, CFG.output_dim, CFG.n_class, self.device, self.args.data_mean, self.args.data_std)
@@ -172,7 +172,7 @@ class MultiCalibModel:
                     lab = lab.to(self.device)
                 
                     self.discriminator.zero_grad()
-                    d_real_decision = self.discriminator(real_data, condition)
+                    d_real_decision = self.discriminator(real_data) # , condition)
                     d_real_loss = 1/ 2 * adversarial_loss(d_real_decision,
                                                 torch.full_like(d_real_decision, 1, device=self.device))
                     d_real_loss.backward()
@@ -188,7 +188,7 @@ class MultiCalibModel:
                                             device=self.device, dtype=torch.float32)
                     x_fake, _ = self.model(condition, lab, noise_batch)
                     x_fake = x_fake.detach()
-                    d_fake_decision = self.discriminator(x_fake, condition)
+                    d_fake_decision = self.discriminator(x_fake) # , condition)
                     d_fake_loss = 1/2 * adversarial_loss(d_fake_decision,
                                                 torch.full_like(d_fake_decision, 0, device=self.device))
                     d_fake_loss.backward()
@@ -244,9 +244,8 @@ class MultiCalibModel:
                     noise_batch = torch.tensor(rs.normal(0, 1, (x_val.size(0), CFG.input_timestep, CFG.noise_dim)), device=self.device,
                                                    dtype=torch.float32)
                 pred, _ = self.model(x_val, lab, noise_batch)
-                pred = pred.detach()
 
-                mse += np.square(pred - y_val).mean()
+                mse += torch.square(pred - y_val).mean()
                 mae += torch.abs(pred - y_val).mean()
                 # mape += torch.mean(torch.abs((pred - y) / y)) * 100
             mse /= cnt
@@ -294,8 +293,8 @@ class MultiCalibModel:
                                                                        dtype=torch.float32)
             else:
                 noise_batch = None
-            # pred, _ = self.model(x, lab, noise_batch)
-            pred, _ = self.model(x, lab)
+            pred, _ = self.model(x, lab, noise_batch)
+            # pred, _ = self.model(x, lab)
             preds.append(pred.cpu().detach().numpy())
             gtruths.append(y.cpu().detach().numpy())
             # mse += torch.mean((pred - y) ** 2)

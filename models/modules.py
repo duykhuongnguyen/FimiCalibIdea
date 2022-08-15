@@ -435,14 +435,15 @@ class Discriminator(nn.Module):
             nn.Sigmoid()
         )
 
-    def forward(self, inp, pred):
+    def forward(self, inp): # , pred):
         _, M, _, _ = inp.shape
 
         outputs = []
         for i in range(M):
             inp_i = inp[:, i, :, :]
-            pred_i = pred[:, i, :, :]
-            d_input = torch.cat((inp_i, pred_i), dim=1)
+            # pred_i = pred[:, i, :, :]
+            # d_input = torch.cat((inp_i, pred_i), dim=1)
+            d_input = inp_i
             h_input, _ = self.input_to_latent(d_input)
 
             input_latent = h_input[:, -1, :]
