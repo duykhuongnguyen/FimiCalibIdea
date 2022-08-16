@@ -5,10 +5,10 @@ import torch.nn as nn
 from models.modules import *
 
 
-class MSJF(nn.Module):
+class GRUMTL(nn.Module):
 
     def __init__(self, input_dim, hidden_dim, output_dim, n_class, device=None, mean=None, std=None):
-        super(MSJF, self).__init__()
+        super(GRUMTL, self).__init__()
 
         self.data_mean = torch.tensor(mean, dtype=torch.float32, device=device)
         self.data_std = torch.tensor(std, dtype=torch.float32, device=device)  
@@ -17,7 +17,7 @@ class MSJF(nn.Module):
             self.pri_enc.add_module(f"Pri Enc {i}", SeriesEncoder(input_dim, hidden_dim))
 
         self.sha_enc = SeriesEncoder(input_dim * n_class, hidden_dim)
-        self.att = Attention(hidden_dim * 2)
+        self.gru = nn.GRU(hidden_dim * 2, hidden_dim * 2, num_layers=2, batch_first=True, bidirectional=True)
         self.dec = nn.Sequential()
         for i in range(n_class):
             self.dec.add_module(f"DEC {i}", nn.Linear(hidden_dim * 4, output_dim))
@@ -41,12 +41,7 @@ class MSJF(nn.Module):
         output = []
         for i in range(M):
             latent_i = latent[:, i, :, :]
-            # latent_i = torch.cat([latent_i, latent_sha], dim=2)
-            # latent_i, _ = self.att(latent_i, latent_i)
-            latent_i_, _ = self.att(latent_i, latent_i)
-            # latent_i, _ = self.att(latent_i, latent_sha)
-            latent_sha_, _ = self.att(latent_sha, latent_i)
-            latent_i = torch.cat([latent_i_, latent_sha_], dim=2)
+            latent_i, _ = self.gru(latent_i)
 
             calib_output_i = self.dec[i](latent_i)
             calib_output_i = calib_output_i * self.data_std[i] + self.data_mean[i]

@@ -272,7 +272,6 @@ def prepare_multicalib_dataset(input_len=CFG.input_timestep, output_len=CFG.outp
 
     for idx, id in enumerate(ids):
         ls_att = ['_'.join([a, id]) for a in atts]
-        print(ls_att)
         if id == 'e':
             for i in range(input_len, dts.shape[0]):
                 y_i = dts[ls_att][i - output_len:i]
@@ -299,10 +298,6 @@ def prepare_multicalib_dataset(input_len=CFG.input_timestep, output_len=CFG.outp
         xs = xs.squeeze()
         ys = ys.squeeze()
         labels = labels.squeeze()
-
-    print(xs.shape)
-    print(ys.shape)
-    print(labels.shape)
 
     x_train = xs[:int(xs.shape[0] * 0.5)]
     y_train = ys[:int(xs.shape[0] * 0.5)]
