@@ -36,8 +36,8 @@ def infer(x, lab):
     return pred
 
 # Inference
-x, y, lab = next(iter(test_loader))
-x = x.to(device)
+for x, y, lab in test_loader:
+    x = x.to(device)
 lab = lab.to(device)
 preds = infer(x, lab)
 
@@ -48,7 +48,7 @@ preds = preds.detach().cpu()
 # Plot
 atts = ['PM2_5', 'PM10', 'humidity']
 ids = ['1', '14', '20', '27', '30']
-fig, ax = plt.subplots(len(atts), len(ids), figsize=(20, 25))
+fig, ax = plt.subplots(len(atts), len(ids), figsize=(20, 5.5))
 
 for i, idx in enumerate(ids):                                  
     for j, att in enumerate(atts):                             

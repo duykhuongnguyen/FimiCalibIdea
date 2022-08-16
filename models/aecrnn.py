@@ -5,17 +5,21 @@ import torch.nn as nn
 # from models.modules import *
 
 
-class CRNN(nn.Module):
+class AECRNN(nn.Module):
 
     def __init__(self, input_dim, output_dim, n_class, device=None, mean=None, std=None,
                  map_to_seq_hidden=64, rnn_hidden=64, leaky_relu=False):
-        super(CRNN, self).__init__()
+        super(AECRNN, self).__init__()
 
         self.data_mean = torch.tensor(mean, dtype=torch.float32, device=device)
         self.data_std = torch.tensor(std, dtype=torch.float32, device=device)  
         self.cnn = nn.Sequential()
         for i in range(n_class):
             self.cnn.add_module(f"CNN {i}", self._cnn_backbone(1, 7, input_dim, leaky_relu, i))
+
+        self.decnn = nn.Sequential()
+        for i in range(n_class):
+            self.decnn.add_module(f"DECNN {i}", self._decnn_backbone(1, 7, input_dim, leaky_relu, i))
 
         self.map_to_seq = nn.Linear(128 * 7, map_to_seq_hidden)
 
@@ -127,6 +131,9 @@ class CRNN(nn.Module):
         output, output_deconv = [], []
         for i in range(M):
             conv_i = latent[:, i, :, :]
+            deconv_i = self.decnn[i](conv_i).squeeze(1)
+            deconv_i = deconv_i * self.data_std[i] + self.data_mean[i]
+            output_deconv.append(deconv_i)
 
             batch, channel, height, width = conv_i.size()
             conv_i = conv_i.view(batch, channel * height, width)
@@ -139,6 +146,7 @@ class CRNN(nn.Module):
             calib_output_i = calib_output_i * self.data_std[i] + self.data_mean[i]
             output.append(calib_output_i)
         output = torch.stack(output, dim=1)
+        output_deconv = torch.stack(output_deconv, dim=1)
 
         return output, output_deconv
 

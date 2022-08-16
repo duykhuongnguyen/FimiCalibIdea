@@ -5,7 +5,10 @@ from utils import EarlyStopping, MetricLogger
 from util.losses import ConstrastiveLoss
 from models.MulCal_v2 import MulCal
 from models.crnn import CRNN
+from models.aecrnn import AECRNN
+from models.gru_mtl import GRUMTL
 from models.msjf import MSJF
+from models.spa import SPA
 from models.modules import *
 from components import CCGGenerator
 from Data.calib_loader import CalibDataset
@@ -55,8 +58,26 @@ class MultiCalibModel:
             print("\nNetwork Architecture\n")
             print(self.model)
             print("\n************************\n")
-        elif baseline == 2:
+        if baseline == 2:
+            self.model = AECRNN(CFG.input_dim, CFG.output_dim, CFG.n_class, self.device, self.args.data_mean, self.args.data_std)
+            self.model.to(self.device)
+            print("\nNetwork Architecture\n")
+            print(self.model)
+            print("\n************************\n")
+        if baseline == 3:
+            self.model = GRUMTL(CFG.input_dim, CFG.hidden_dim, CFG.output_dim, CFG.n_class, self.device, self.args.data_mean, self.args.data_std)
+            self.model.to(self.device)
+            print("\nNetwork Architecture\n")
+            print(self.model)
+            print("\n************************\n")
+        if baseline == 4:
             self.model = MSJF(CFG.input_dim, CFG.hidden_dim, CFG.output_dim, CFG.n_class, self.device, self.args.data_mean, self.args.data_std)
+            self.model.to(self.device)
+            print("\nNetwork Architecture\n")
+            print(self.model)
+            print("\n************************\n")
+        elif baseline == 5:
+            self.model = SPA(CFG.input_dim, CFG.hidden_dim, CFG.output_dim, CFG.n_class, self.device, self.args.data_mean, self.args.data_std)
             self.model.to(self.device)
             print("\nNetwork Architecture\n")
             print(self.model)
@@ -293,8 +314,8 @@ class MultiCalibModel:
                                                                        dtype=torch.float32)
             else:
                 noise_batch = None
-            pred, _ = self.model(x, lab, noise_batch)
-            # pred, _ = self.model(x, lab)
+            # pred, _ = self.model(x, lab, noise_batch)
+            pred, _ = self.model(x, lab)
             preds.append(pred.cpu().detach().numpy())
             gtruths.append(y.cpu().detach().numpy())
             # mse += torch.mean((pred - y) ** 2)
